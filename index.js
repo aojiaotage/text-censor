@@ -1,6 +1,6 @@
 var fs = require('fs')
 
-var path = './keywords'
+var path = __dirname + '/keywords'
 
 var map = {}
 
@@ -14,11 +14,6 @@ lineReader.on('line', function (line) {
 });
 
 function addWord(word) {
-  //
-  // if (word.length == 1) {
-  //   if (!map[word]) map[word] = {}
-  //   return
-  // }
 
   var parent = map
 
