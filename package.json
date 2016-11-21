@@ -1,6 +1,6 @@
 {
   "name": "text-censor",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Censor politically-sensitive words in China. 国内敏感词过滤器。",
   "main": "index.js",
   "scripts": {
