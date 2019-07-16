@@ -1,85 +1,81 @@
-var fs = require('fs')
+const fs = require('fs')
 
-var path = __dirname + '/keywords'
+const path = __dirname + '/keywords'
 
-var map = {}
+let map = new Map();
 
-var lineReader = require('readline').createInterface({
-  input: require('fs').createReadStream(path, {encoding: 'UTF-8'})
+let lineReader = require('readline').createInterface({
+  input: fs.createReadStream(path, { encoding: 'UTF-8' })
 });
 
-lineReader.on('line', function (line) {
-  if(!line) return
+lineReader.on('line', line => {
+  if (!line) return
   addWord(line)
 });
 
-function addWord(word) {
 
-  var parent = map
+let addWord = word => {
+  let parent = map
 
-  for (var i = 0; i < word.length; i++) {
-    if (!parent[word[i]]) parent[word[i]] = {}
-    parent = parent[word[i]]
+  for (let i = 0; i < word.length; i++) {
+    let char = word[i]
+    if (!parent.has(char)) {
+      parent.set(char, new Map())
+    }
+    parent = parent.get(char)
   }
-  parent.isEnd = true
+  parent.set('isEnd', true)
 }
 
-function filter(s, cb) {
-  var parent = map
+let getMap = async s => {
+  return new Promise((res) => {
+    lineReader.on('close', () => res(map))
+  })
+}
 
-  for (var i = 0; i < s.length; i++) {
-    if (s[i] == '*') {
-      continue
-    }
+let filter = async s => {
+  let parent = map.size > 0 ? map : await getMap()
+  // 敏感词收集
+  let words = []
 
-    var found = false
-    var skip = 0
-    var sWord = ''
+  for (let i = 0; i < s.length; i++) {
+    let word = ''
+    let sWord = ''
 
-    for (var j = i; j < s.length; j++) {
-
-      if (!parent[s[j]]) {
-        // console.log('skip ', s[j])
-        found = false
-        skip = j - i
+    for (let j = i; j < s.length; j++) {
+      let char = s[j]
+      // 一次对比敏感词结束，收集要替换的敏感词
+      if (!parent.has(char)) {
         parent = map
-        break;
-      }
-
-      sWord = sWord + s[j]
-      if (parent[s[j]].isEnd) {
-        found = true
-        skip = j - i
+        // 去重，去空
+        if (!words.includes(word) && word.length > 0) {
+          words.unshift(word)
+        }
         break
       }
-      parent = parent[s[j]]
-    }
 
-    if (skip > 1) {
-      i += skip - 1
+      sWord = sWord + char
+      // 记录关键字
+      if (parent.get(char).get('isEnd')) {
+        word = sWord
+      }
+      parent = parent.get(char)
     }
-
-    if (!found) {
-      continue
-    }
-
-    var stars = '*'
-    for (var k = 0; k < skip; k++) {
-      stars = stars + '*'
-    }
-
-    var reg = new RegExp(sWord, 'g')
+  }
+  // 排序，先替换长字符长
+  words = words.sort((a, b) => b.length - a.length)
+  console.log(words)
+  // 替换敏感词
+  words.forEach(word => {
+    let stars = ''.padEnd(word.length, '*');
+    let reg = new RegExp(word, 'g')
     s = s.replace(reg, stars)
-
-  }
-
-  if(typeof cb === 'function'){
-    cb(null, s)
-  }
+  })
 
   return s
 }
 
 module.exports = {
-  filter: filter
+  addWord,
+  filter
 }
